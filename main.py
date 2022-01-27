@@ -107,7 +107,7 @@ async def on_ready():
     print("Формирование базы данных завершено")
 
 
-@bot.command()
+@bot.command(aliases=["h"])
 async def help(ctx):
     """
     `d!help`: Выводит данное сообщение.
@@ -120,7 +120,7 @@ async def help(ctx):
     await ctx.send(embed=result)
 
 
-@bot.command()
+@bot.command(aliases=["i"])
 async def info(ctx, *item):
     """
     `d!info <item>`: Выдаёт информацию по указанному предмету.
@@ -191,7 +191,7 @@ async def info(ctx, *item):
     else: await ctx.send(embed=result)
 
 
-@bot.command()
+@bot.command(aliases=["l"])
 async def lang(ctx, entered_lang=None):
     """
     `d!lang [language]`: Если параметр `language` не указан, то выводит текущий язык. Иначе меняет текущий язык на указанный.
