@@ -163,16 +163,18 @@ async def info(ctx, *item):
                 s[func("Эффект от item:[Book of Virtues]", arr, language)] = specific_item["book-of-virtues-wisp"]
                 s[func("Эффект от item:[Birthright] Иуды", arr, language)] = specific_item['judas-birthright-effect']
         case "Брелок" | "Карты и Руны" | "Пилюли" as a:
-            result.add_field(name="Тип", value=a, inline=False)
+            result.add_field(name="Тип", value=a, inline=True)
             result.add_field(name="ID", value=specific_item['data-id'], inline=True)
-    if specific_item["data-opening"]:
-        result.add_field(name="Как открыть", value=specific_item["data-opening"], inline=False)
-    elif specific_item["data-opening-character"] == specific_item["data-opening-ending"] == "none":
-        result.add_field(name="Как открыть", value="Открыто изначально", inline=False)
-    else:
-        result.add_field(name="Как открыть",
-                         value=f"Победить {specific_item['data-opening-ending']} за{' порченого' * (specific_item['character-type'] == 'tainted')} {specific_item['data-opening-character']}",
-                         inline=False)
+    try:
+        if specific_item["data-opening"]:
+            result.add_field(name="Как открыть", value=specific_item["data-opening"], inline=False)
+        elif specific_item["data-opening-character"] == specific_item["data-opening-ending"] == "none":
+            result.add_field(name="Как открыть", value="Открыто изначально", inline=False)
+        else:
+            result.add_field(name="Как открыть",
+                             value=f"Победить {specific_item['data-opening-ending']} за{' порченого' * (specific_item['character-type'] == 'tainted')} {specific_item['data-opening-character']}",
+                             inline=False)
+    except KeyError: result.add_field(name="Как открыть", value="Открыто изначально", inline=False)
     result.set_thumbnail(url=specific_item["data-icon"])
     result.set_footer(text="Материал с сайта dead-god.ru")
     components = [Button(style=ButtonStyle.blue, label=i) for i in s.keys() if s[i]]
