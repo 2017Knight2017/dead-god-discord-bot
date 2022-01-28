@@ -113,7 +113,8 @@ async def help(ctx):
     `d!help`: Выводит данное сообщение.
     """
     result = discord.Embed(title="Помощь по командам",
-                           description="Аргумент в угловых скобках обязательный, а в квадратных — опциональный.")
+                           description="Аргумент в угловых скобках обязательный, а в квадратных — опциональный." +
+                                       " Вместо полного написания команды можно использоватьего первую букву, например, `d!h` вместо `d!help`.")
     for key, elem in globals().items():
         if isinstance(elem, discord.ext.commands.Command):
             result.add_field(name=f"d!{key}", value=elem.help, inline=False)
@@ -180,14 +181,14 @@ async def info(ctx, *item):
         response = await bot.wait_for("button_click")
         desc = func(s[response.component.label], arr, language)
         if type(desc) == tuple:
-            await ctx.send(embed=discord.Embed(
+            await response.respond(embed=discord.Embed(
                 title=f"{response.component.label}:",
-                description=f"```{desc[0]}```"), components=[Button(style=ButtonStyle.blue, label="Читать далее")])
+                description=f"```{desc[0]}```"), components=[Button(style=ButtonStyle.blue, label="Читать далее")], ephemeral=False)
             response = await bot.wait_for("button_click")
             if response.component.label == "Читать далее":
                 await response.respond(embed=discord.Embed(description=f"```{desc[1]}```"), ephemeral=False)
         else:
-            await ctx.send(embed=discord.Embed(description=f"```{desc}```"))
+            await response.respond(embed=discord.Embed(description=f"```{desc}```"), ephemeral=False)
     else: await ctx.send(embed=result)
 
 
@@ -197,9 +198,9 @@ async def lang(ctx, entered_lang=None):
     `d!lang [language]`: Если параметр `language` не указан, то выводит текущий язык. Иначе меняет текущий язык на указанный.
     """
     global language
+    if entered_lang is None:
+        await ctx.send(f"Текущий язык названий предметов: {language}")
     match entered_lang.capitalize():
-        case None:
-            await ctx.send(f"Текущий язык названий предметов: {language}")
         case "Русский" | "English" as t:
             if language != t:
                 language = t
