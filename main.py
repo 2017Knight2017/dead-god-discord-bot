@@ -11,11 +11,12 @@ bot.remove_command("help")
 arr = [{} for i in range(1077)]
 dead_god_html = BS(requests.get("https://dead-god.ru/").content, "html.parser")
 language = "Русский"
+info_number = 0
 
 
 def func(string: str, items_list: list, entered_lang: str) -> str | tuple[str, str]:
-    res = re.split(r"item:\[[A-Za-z0-9./\s\'!?]*]", string)
-    string_items = re.findall(r"item:\[[A-Za-z0-9./\s\'!?]*]", string)
+    res = re.split(r"item:\[[A-Za-z0-9./\s\'\-!?]*]", string)
+    string_items = re.findall(r"item:\[[A-Za-z0-9./\s\'\-!?]*]", string)
     for j, elem in enumerate(string_items):
         for i in items_list:
             if i["data-name"] == elem[6:-1]:
@@ -126,6 +127,9 @@ async def info(ctx, *item):
     """
     `d!info <item>`: Выдаёт информацию по указанному предмету.
     """
+    global info_number
+    info_number += 1
+    local_info_number = info_number
     entered_item = " ".join(item)
     specific_item = {}
     for i, elem in enumerate(arr):
@@ -180,17 +184,19 @@ async def info(ctx, *item):
     components = [Button(style=ButtonStyle.blue, label=i) for i in s.keys() if s[i]]
     if components:
         await ctx.send(embed=result, components=components)
-        response = await bot.wait_for("button_click")
-        desc = func(s[response.component.label], arr, language)
-        if type(desc) == tuple:
-            await response.respond(embed=discord.Embed(
-                title=f"{response.component.label}:",
-                description=f"```{desc[0]}```"), components=[Button(style=ButtonStyle.blue, label="Читать далее")], ephemeral=False)
-            response = await bot.wait_for("button_click")
-            if response.component.label == "Читать далее":
-                await response.respond(embed=discord.Embed(description=f"```{desc[1]}```"), ephemeral=False)
-        else:
-            await response.respond(embed=discord.Embed(description=f"```{desc}```"), ephemeral=False)
+        response = await bot.wait_for("button_click"), info_number
+        desc = func(s[response[0].component.label], arr, language)
+        if response[1] == local_info_number:
+            if type(desc) == tuple:
+                await response[0].respond(embed=discord.Embed(
+                    title=f"{response[0].component.label}:",
+                    description=f"```{desc[0]}```"), components=[Button(style=ButtonStyle.blue, label="Читать далее")], ephemeral=False)
+                response = await bot.wait_for("button_click"), info_number
+                if response[0].component.label == "Читать далее":
+                    await response[0].respond(embed=discord.Embed(description=f"```{desc[1]}```"), ephemeral=False)
+            else:
+                await response[0].respond(embed=discord.Embed(description=f"```{desc}```"), ephemeral=False)
+        else: pass
     else: await ctx.send(embed=result)
 
 
