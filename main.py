@@ -1,15 +1,11 @@
 import discord
-import requests
 import re
 from discord_components import DiscordComponents, Button, ButtonStyle
 from discord.ext import commands
-from bs4 import BeautifulSoup as BS
 from json import loads
 
 bot = commands.Bot(command_prefix="d!")
 bot.remove_command("help")
-arr = [{} for i in range(1077)]
-dead_god_html = BS(requests.get("https://dead-god.ru/").content, "html.parser")
 language = "Русский"
 info_number = 0
 
@@ -75,37 +71,6 @@ def func2(a: list) -> list:
 async def on_ready():
     print("Успешно зашёл")
     DiscordComponents(bot)
-    for i, elem in enumerate(dead_god_html.select(".item")):
-        for j in elem.findAll("span"):
-            a = ""
-            match j.text:
-                case "isaac": a = "Исаака"
-                case "magdalene": a = "Магдалину"
-                case "cain": a = "Каина"
-                case "judas": a = "Иуду"
-                case "bluebaby" | "blue_baby": a = "???"
-                case "samson": a = "Самсона"
-                case "eden": a = "Эдема"
-                case "azazel": a = "Азазеля"
-                case "lazarus": a = "Лазаря"
-                case "lilith": a = "Лилит"
-                case "keeper": a = "Хранителя"
-                case "lost": a = "Потерянного"
-                case "apollyon": a = "Аполлиона"
-                case "bethany": a = "Вифанию"
-                case "jacob_and_esau": a = "Иакова и Исава"
-                case "mother": a = "Матерь"
-                case "lamb": a = "Агнца"
-                case "satan": a = "Сатану"
-                case "beast": a = "Биста"
-                case "delirium": a = "Делирия"
-                case "ultra_greed": a = "Ультра Грида"
-                case "ultra_greedier": a = "Ультра Гридера"
-                case "boss_rush": a = "Босс Раш"
-                case "two_marks": a = "Босс Раш и Хаша"
-                case _: a = j.text
-            arr[i][list(j.attrs.keys())[0]] = a
-    print("Формирование базы данных завершено")
 
 
 @bot.command(aliases=["h"])
@@ -132,72 +97,74 @@ async def info(ctx, *item):
     local_info_number = info_number
     entered_item = " ".join(item)
     specific_item = {}
-    for i, elem in enumerate(arr):
-        match language:
-            case "Русский":
-                if elem["data-name-rus"].lower() == entered_item.lower(): specific_item = arr[i]
-            case "English":
-                if elem["data-name"].lower() == entered_item.lower(): specific_item = arr[i]
-    result = discord.Embed(
-        title=specific_item["data-name-rus"] if language == "Русский" else specific_item["data-name"],
-        description=f"```{func(specific_item['data-description'], arr, language)}```")
-    s = {"Доп. информация или синергии": specific_item['data-synergies'],
-         "Баги": specific_item['data-bugs']}
-    match loads(specific_item['data-type'])['label']:
-        case "Пассивный":
-            result.add_field(name="Тип", value="Пассивный предмет", inline=False)
-            result.add_field(name="ID", value=specific_item['data-id'], inline=True)
-            result.add_field(name="Качество", value=specific_item["data-quality"], inline=True)
-            if loads(specific_item['data-pools'])[0]["label"] == "Без пула":
-                result.add_field(name="Пулы", value="Без пула", inline=False)
+    with open("data.json", "r") as arr:
+        arr = loads(arr.readline())
+        for i, elem in enumerate(arr):
+            match language:
+                case "Русский":
+                    if elem["data-name-rus"].lower() == entered_item.lower(): specific_item = arr[i]
+                case "English":
+                    if elem["data-name"].lower() == entered_item.lower(): specific_item = arr[i]
+        result = discord.Embed(
+            title=specific_item["data-name-rus"] if language == "Русский" else specific_item["data-name"],
+            description=f"```{func(specific_item['data-description'], arr, language)}```")
+        s = {"Доп. информация или синергии": specific_item['data-synergies'],
+             "Баги": specific_item['data-bugs']}
+        match loads(specific_item['data-type'])['label']:
+            case "Пассивный":
+                result.add_field(name="Тип", value="Пассивный предмет", inline=False)
+                result.add_field(name="ID", value=specific_item['data-id'], inline=True)
+                result.add_field(name="Качество", value=specific_item["data-quality"], inline=True)
+                if loads(specific_item['data-pools'])[0]["label"] == "Без пула":
+                    result.add_field(name="Пулы", value="Без пула", inline=False)
+                else:
+                    result.add_field(name="Пулы", value=', '.join(func2(loads(specific_item['data-pools']))),
+                                     inline=False)
+            case "Активный":
+                result.add_field(name="Тип", value="Активный предмет", inline=False)
+                result.add_field(name="ID", value=specific_item['data-id'], inline=True)
+                result.add_field(name="Качество", value=specific_item["data-quality"], inline=True)
+                result.add_field(name="Зарядов", value=specific_item["data-charges"] + " (Одноразовый)" * (
+                            specific_item["data-charges"] == "0"), inline=True)
+                if loads(specific_item['data-pools'])[0]["label"] == "Без пула":
+                    result.add_field(name="Пулы", value="Без пула", inline=False)
+                else:
+                    result.add_field(name="Пулы", value=', '.join(func2(loads(specific_item['data-pools']))),
+                                     inline=False)
+                    s[func("Эффект от item:[Book of Virtues]", arr, language)] = specific_item["book-of-virtues-wisp"]
+                    s[func("Эффект от item:[Birthright] Иуды", arr, language)] = specific_item['judas-birthright-effect']
+            case "Брелок" | "Карты и Руны" | "Пилюли" as a:
+                result.add_field(name="Тип", value=a, inline=True)
+                result.add_field(name="ID", value=specific_item['data-id'], inline=True)
+        try:
+            if specific_item["data-opening"]:
+                result.add_field(name="Как открыть", value=specific_item["data-opening"], inline=False)
+            elif specific_item["data-opening-character"] == specific_item["data-opening-ending"] == "none":
+                result.add_field(name="Как открыть", value="Открыто изначально", inline=False)
             else:
-                result.add_field(name="Пулы", value=', '.join(func2(loads(specific_item['data-pools']))),
+                result.add_field(name="Как открыть",
+                                 value=f"Победить {specific_item['data-opening-ending']} за{' порченого' * (specific_item['character-type'] == 'tainted')} {specific_item['data-opening-character']}",
                                  inline=False)
-        case "Активный":
-            result.add_field(name="Тип", value="Активный предмет", inline=False)
-            result.add_field(name="ID", value=specific_item['data-id'], inline=True)
-            result.add_field(name="Качество", value=specific_item["data-quality"], inline=True)
-            result.add_field(name="Зарядов", value=specific_item["data-charges"] + " (Одноразовый)" * (
-                        specific_item["data-charges"] == "0"), inline=True)
-            if loads(specific_item['data-pools'])[0]["label"] == "Без пула":
-                result.add_field(name="Пулы", value="Без пула", inline=False)
-            else:
-                result.add_field(name="Пулы", value=', '.join(func2(loads(specific_item['data-pools']))),
-                                 inline=False)
-                s[func("Эффект от item:[Book of Virtues]", arr, language)] = specific_item["book-of-virtues-wisp"]
-                s[func("Эффект от item:[Birthright] Иуды", arr, language)] = specific_item['judas-birthright-effect']
-        case "Брелок" | "Карты и Руны" | "Пилюли" as a:
-            result.add_field(name="Тип", value=a, inline=True)
-            result.add_field(name="ID", value=specific_item['data-id'], inline=True)
-    try:
-        if specific_item["data-opening"]:
-            result.add_field(name="Как открыть", value=specific_item["data-opening"], inline=False)
-        elif specific_item["data-opening-character"] == specific_item["data-opening-ending"] == "none":
-            result.add_field(name="Как открыть", value="Открыто изначально", inline=False)
-        else:
-            result.add_field(name="Как открыть",
-                             value=f"Победить {specific_item['data-opening-ending']} за{' порченого' * (specific_item['character-type'] == 'tainted')} {specific_item['data-opening-character']}",
-                             inline=False)
-    except KeyError: result.add_field(name="Как открыть", value="Открыто изначально", inline=False)
-    result.set_thumbnail(url=specific_item["data-icon"])
-    result.set_footer(text="Материал с сайта dead-god.ru")
-    components = [Button(style=ButtonStyle.blue, label=i) for i in s.keys() if s[i]]
-    if components:
-        await ctx.send(embed=result, components=components)
-        response = await bot.wait_for("button_click"), info_number
-        desc = func(s[response[0].component.label], arr, language)
-        if response[1] == local_info_number:
-            if type(desc) == tuple:
-                await response[0].respond(embed=discord.Embed(
-                    title=f"{response[0].component.label}:",
-                    description=f"```{desc[0]}```"), components=[Button(style=ButtonStyle.blue, label="Читать далее")], ephemeral=False)
-                response = await bot.wait_for("button_click"), info_number
-                if response[0].component.label == "Читать далее":
-                    await response[0].respond(embed=discord.Embed(description=f"```{desc[1]}```"), ephemeral=False)
-            else:
-                await response[0].respond(embed=discord.Embed(description=f"```{desc}```"), ephemeral=False)
-        else: pass
-    else: await ctx.send(embed=result)
+        except KeyError: result.add_field(name="Как открыть", value="Открыто изначально", inline=False)
+        result.set_thumbnail(url=specific_item["data-icon"])
+        result.set_footer(text="Материал с сайта dead-god.ru")
+        components = [Button(style=ButtonStyle.blue, label=i) for i in s.keys() if s[i]]
+        if components:
+            await ctx.send(embed=result, components=components)
+            response = await bot.wait_for("button_click"), info_number
+            desc = func(s[response[0].component.label], arr, language)
+            if response[1] == local_info_number:
+                if type(desc) == tuple:
+                    await response[0].respond(embed=discord.Embed(
+                        title=f"{response[0].component.label}:",
+                        description=f"```{desc[0]}```"), components=[Button(style=ButtonStyle.blue, label="Читать далее")], ephemeral=False)
+                    response = await bot.wait_for("button_click"), info_number
+                    if response[0].component.label == "Читать далее":
+                        await response[0].respond(embed=discord.Embed(description=f"```{desc[1]}```"), ephemeral=False)
+                else:
+                    await response[0].respond(embed=discord.Embed(description=f"```{desc}```"), ephemeral=False)
+            else: pass
+        else: await ctx.send(embed=result)
 
 
 @bot.command(aliases=["l"])
